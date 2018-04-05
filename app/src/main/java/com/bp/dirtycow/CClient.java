@@ -1,3 +1,8 @@
+// Autor: Vit Soucek
+// Zdroj: Odpoved uzivatele Nicolas Defranoux na StackOverflow
+//        (https://stackoverflow.com/a/22018455/6136143), upraveno
+
+
 package com.bp.dirtycow;
 
 import android.util.Log;
@@ -7,10 +12,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
-
-/*
-Zdroj: https://stackoverflow.com/q/22018305/6136143
- */
 
 public class CClient implements Runnable {
     private Socket socket;

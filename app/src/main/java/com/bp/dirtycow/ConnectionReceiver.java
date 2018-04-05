@@ -1,3 +1,6 @@
+// Zdroj: Clanek Handle No Internet Connectivity in Android Activity, autor Anu S Pillai
+//        (http://www.gadgetsaint.com/android/no-internet-connectivity-android/#.Wq_kX9Yo_iE)
+
 package com.bp.dirtycow;
 
 import android.content.BroadcastReceiver;
@@ -7,9 +10,6 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
 import com.bp.dirtycow.BPApplication;
-
-
-// Zdroj: http://www.gadgetsaint.com/android/no-internet-connectivity-android/#.Wq_kX9Yo_iE
 
 public class ConnectionReceiver extends BroadcastReceiver {
 

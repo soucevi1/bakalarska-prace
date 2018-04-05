@@ -1,5 +1,5 @@
-#ifndef BAKALARKA_PAYLOADS_H
-#define BAKALARKA_PAYLOADS_H
+#ifndef DIRTYCOW_PAYLOADS_H
+#define DIRTYCOW_PAYLOADS_H
 #endif
 
 /*
