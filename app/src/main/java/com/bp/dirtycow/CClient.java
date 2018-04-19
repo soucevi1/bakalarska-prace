@@ -1,6 +1,7 @@
-// Autor: Vit Soucek
+// Tento soubor je soucast bakalarske prace Aplikace vyuzivajici zranitelnost Dirty Cow pro operacni system Android
+// Autor: Vit Soucek (soucevi1@fit.cvut.cz)
 // Zdroj: Odpoved uzivatele Nicolas Defranoux na StackOverflow
-//        (https://stackoverflow.com/a/22018455/6136143), upraveno
+//          (https://stackoverflow.com/a/22018455/6136143), upraveno
 
 
 package com.bp.dirtycow;

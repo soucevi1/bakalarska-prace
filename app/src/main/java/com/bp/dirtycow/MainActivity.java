@@ -1,5 +1,6 @@
+// Tento kod je soucast bakalarske prace Aplikace vyuzivajici zranitelnost Dirty Cow pro operacni system Android
 // Autor: Vit Soucek (soucevi1@fit.cvut.cz)
-// Zdroje prevzateho kodu jsou uvedeny primo u danych prevzatych casti.
+// Zdroje jsou uvedeny primo u danych prevzatych casti.
 
 package com.bp.dirtycow;
 

